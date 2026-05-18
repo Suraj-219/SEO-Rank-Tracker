@@ -28,7 +28,7 @@
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/Suraj-219/SEO_Rank_Tracker.git
+    git clone https://github.com/Suraj-219/SEO-Rank-Tracker.git
     ```
 2. Navigate to the project directory:
     ```bash
