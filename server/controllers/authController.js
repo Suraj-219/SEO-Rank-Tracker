@@ -1,4 +1,12 @@
 import User from "../models/User.model.js"
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+
+// Generate JWT token
+const generateToken = (id)=> {
+    return jwt.sign({id}, process.env.JWT_SECRET, {expiresIn: "30d"})
+}
+
 // Register user
 export const register = async(req, res) => {
     try {
@@ -14,7 +22,18 @@ export const register = async(req, res) => {
             success: false, message: "User already exists"
         });
 
-    } catch (error) {
+        // Hash Password
+        const hashedPassword = await bcrypt.hash(password, await bcrypt.genSalt(10))
 
+        // Create User
+        const user = await User.create({name, email, password:hashedPassword})
+
+        const token = generateToken(user._id);
+
+        res.status(201).json({success: true, token, user})
+
+    } catch (error) {
+        console.error("Register error:", error.message)
+        res.status(500).json({success: false, message: "Server error"})
     }
 }
