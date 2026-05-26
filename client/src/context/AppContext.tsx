@@ -1,5 +1,6 @@
 import type { AxiosInstance } from "axios";
-import { createContext, useState, type ReactNode } from "react";
+import axios from "axios";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 interface User{
     id: string;
@@ -29,10 +30,67 @@ export function AppProvider({children}: {children: ReactNode}){
     const [token, setToken] = useState<String | null>(localStorage.getItem("token"));
     const [loading, setLoading] = useState(true);
 
-    const value = {}
+    // Axios instance with auth header
+    const api = axios.create({
+        baseURL: BACKEND_URL
+    })
+
+    // Update axios headers when token changes
+    api.interceptors.request.use((config)=>{
+        const token = localStorage.getItem("token")
+
+        if(token){
+            config.headers.Authorization = `Bearer ${token}`
+        }
+
+        return config;
+
+    })
+
+    const loadUser = async () => {
+        if(!token){
+            setLoading(false)
+            return;
+        }
+        try {
+            const { data } = await api.get('/api/auth/user')
+            if(data.success){
+                setUser(data.user)
+            }
+        } catch (error) {
+            localStorage.removeItem("token");
+            setToken(null)
+            setUser(null)
+        }
+        setLoading(false)
+    }
+
+    useEffect(()=>{
+        loadUser()
+    },[])
+
+    const login = async () => {
+
+    }
+
+    const register = async () => {
+
+    }
+
+    const logout = async () => {
+
+    }
+
+    const value = { user, token, loading, api, login, register, logout }
 
     return <AppContext.Provider value={value}>
         {children}
     </AppContext.Provider>
 
+}
+
+export function useApp(){
+    const context = useContext(AppContext)
+    if(!context) throw new Error("useApp must be used within AppProvider");
+    return context;
 }
