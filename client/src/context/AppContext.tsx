@@ -85,8 +85,19 @@ export function AppProvider({children}: {children: ReactNode}){
 
     }
 
-    const register = async () => {
-
+    const register = async (name: string, email: string, password: string) => {
+        try{
+            const res = await axios.post(`${BACKEND_URL}/api/auth/register`, {name, email, password})
+            if(res.data.success){
+                setToken(res.data.token)
+                setUser(res.data.user)
+                localStorage.setItem("token", res.data.token)
+                return {success: true}
+            }
+            return {success: false, message: res.data.message}
+        } catch(error: any) {
+            return {success: false, message: error.response?.data?.message || "Registration failed"}
+        }
     }
 
     const logout = async () => {
