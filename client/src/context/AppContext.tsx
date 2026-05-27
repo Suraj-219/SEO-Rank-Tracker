@@ -69,7 +69,19 @@ export function AppProvider({children}: {children: ReactNode}){
         loadUser()
     },[])
 
-    const login = async () => {
+    const login = async (email: string, password: string) => {
+        try{
+            const res = await axios.post(`${BACKEND_URL}/api/auth/login`, {email, password})
+            if(res.data.success){
+                setToken(res.data.token)
+                setUser(res.data.user)
+                localStorage.setItem("token", res.data.token)
+                return {success: true}
+            }
+            return {success: false, message: res.data.message}
+        } catch(error: any) {
+            return {success: false, message: error.response?.data?.message || "Login failed"}
+        }
 
     }
 
