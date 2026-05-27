@@ -101,7 +101,9 @@ export function AppProvider({children}: {children: ReactNode}){
     }
 
     const logout = async () => {
-
+        setToken(null)
+        setUser(null)
+        localStorage.removeItem("token")
     }
 
     const value = { user, token, loading, api, login, register, logout }
