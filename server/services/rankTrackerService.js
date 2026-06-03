@@ -15,6 +15,22 @@ export async function rankTracker(keyword, targetDomain) {
         const page = browser.contexts()[0].pages()[0];
         page.setDefaultNavigationTimeout(45000);
 
+
+        // 2. Initial Google Visit & Content Handling
+        await page.goto("https://www.google.com", {waitUntil: "networkidle"});
+        try {
+            const btn = await page.$('button[id="L2AGLb"], from[action*="consent"] button')
+            if(btn){
+                await btn.click();
+                await page.waitForTimeout(1500);
+            }
+        } catch { }
+
+        let found = null,
+        allResults = [];
+
+        const cleanTarget = targetDomain.replace("www.", "").toLowerCase();
+
     } catch (error) {
 
     }
