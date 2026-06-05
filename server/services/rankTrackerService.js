@@ -38,41 +38,48 @@ export async function rankTracker(keyword, targetDomain) {
 
         // 4. Page Extraction: Retry up to 3 times if results are missing
         let pageResults = [];
-        for(let retry = 0; retry < 3; retry++){
+        for (let retry = 0; retry < 3; retry++) {
             try {
-                await page.waitForSelector('h3', {timeout: 8000});
+                await page.waitForSelector('h3', { timeout: 8000 });
                 await page.waitForTimeout(1500)
-                pageResults = await page.evaluate(()=> Array.from(document.querySelectorAll("h3")).map((h3)=>{
+                pageResults = await page.evaluate(() => Array.from(document.querySelectorAll("h3")).map((h3) => {
                     let a = h3.closest('a');
-                    if(!a){
+                    if (!a) {
                         let p = h3.parentElement;
-                        for(let j = 0; j < 5 && p; j++, p = p.parentElement){
-                            if(p.tagName === "A"){
+                        for (let j = 0; j < 5 && p; j++, p = p.parentElement) {
+                            if (p.tagName === "A") {
                                 a = p;
                                 break;
                             }
                             const sub = p.querySelector("a[href]");
-                            if(sub && sub.contains(h3)){
+                            if (sub && sub.contains(h3)) {
                                 a = sub;
                                 break;
                             }
                         }
                     }
-                    if(!a || !a.href.startsWith("http") || a.href.includes('google.')) return null;
+                    if (!a || !a.href.startsWith("http") || a.href.includes('google.')) return null;
                     let s = "",
-                    c = a.parentElement;
-                    for(let j = 0; j < 6 && j++; c = c.parentElement){
+                        c = a.parentElement;
+                    for (let j = 0; j < 6 && j++; c = c.parentElement) {
                         const txt = c.innerText || "";
-                        if(txt.length > h3.innerText.length + 50){
-                            s = (txt.split("\n").find((l)=>l.length > 30 && !l.includes(h3.innerText.substring(0,20))) || "").trim().substring(0,300);
+                        if (txt.length > h3.innerText.length + 50) {
+                            s = (txt.split("\n").find((l) => l.length > 30 && !l.includes(h3.innerText.substring(0, 20))) || "").trim().substring(0, 300);
+                            if (s) break;
                         }
                     }
-                }))
+                    return { url: a.href, domain: new URL(a.href).hostname.replace("www.", ""), title: h3.innerText.trim(), snippet: s }
+                }).filter(Boolean));
+                if (pageResults.length > 0) break;
+                await page.reload({ waitUntil: "networkidle" });
 
-            } catch (error) {
+            } catch (err) {
+                if (retry === 2) break;
+                await page.reload({ waitUntil: "networkidle" });
 
             }
         }
+        if (!pageResults.length) break;
 
     } catch (error) {
 
