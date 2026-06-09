@@ -79,6 +79,17 @@ export async function rankTracker(keyword, targetDomain) {
                 }
             }
             if (!pageResults.length) break;
+
+            // 5. Results Synthesis: Update global results and check for target match
+            for(const r of pageResults){
+                r.position = allResults.length + 1;
+                allResults.push(r)
+                if(!found && (r.domain.toLowerCase().includes(cleanTarget) || cleanTarget.includes(r.domain.toLowerCase()))){
+                    found = {...r, page: gPage + 1}
+                }
+            }
+            if(found) break;
+            await page.waitForTimeout(2000 + Math.random() * 2000);
         }
 
     } catch (error) {
