@@ -92,7 +92,27 @@ export async function rankTracker(keyword, targetDomain) {
             await page.waitForTimeout(2000 + Math.random() * 2000);
         }
 
-    } catch (error) {
+        // 6. Finalization: Close browser and extract competitors
+        await browser.close();
+        const competitors = allResults.filter((r)=>!r.domain.toLowerCase().includes(cleanTarget) && !cleanTarget.includes(r.domain.toLowerCase())).slice(0,10);
 
+        return {
+            success: true,
+            data: {
+                keyword,
+                targetDomain,
+                position: found?.position || null,
+                page: found?.page || null,
+                title: found?.title || "",
+                snippet: found?.snippet || "",
+                competitors,
+                totalResultsScanned: allResults.length
+            }
+        }
+
+    } catch (error) {
+        console.error("Rank check error:", error.message);
+        if(browser) await browser.close().catch(()=>{})
+            return {success: false, error: error.message}
     }
 } 
