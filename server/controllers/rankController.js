@@ -1,4 +1,5 @@
-import keywordTracking from "../models/keywordTracking.js";
+import KeywordTracking from "../models/KeywordTracking.js";
+import { keywordTracking } from "../services/keywordTrackingService.js";
 
 // Add a keyword to track
 export const addKeyword = async (req, res) => {
@@ -20,14 +21,14 @@ export const addKeyword = async (req, res) => {
         }
 
         // Check if already tracking this keyword+domain
-        const existing = await keywordTracking.findOne({userId: req.userId, keyword: keyword.toLowerCase().trim(), domain});
+        const existing = await KeywordTracking.findOne({userId: req.userId, keyword: keyword.toLowerCase().trim(), domain});
 
         if(existing){
             return res.status(400).json({ success: false, message: "Already tracking this keyword for this domain" });
         }
 
         // Create tracking entry
-        const tracking = await keywordTracking.create({
+        const tracking = await KeywordTracking.create({
             userId: req.userId,
             keyword: keyword.toLowerCase().trim(),
             url: url.startsWith("http") ? url : `https://${url}`,
@@ -36,9 +37,12 @@ export const addKeyword = async (req, res) => {
         })
 
         res.status(201).json({ success: true, message: "keyword tracking started", tracking });
+        keywordTracking(tracking)
 
     } catch (error) {
-
+        console.error("Add keyword error:", error.message);
+        if (error.code === 11000) return res.status(400).json({ success: false, message: "Already tracking this keyword" });
+        res.status(500).json({ success: false, message: "Server error" });
     }
 }
 
