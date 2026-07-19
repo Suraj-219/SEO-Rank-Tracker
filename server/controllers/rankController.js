@@ -108,5 +108,18 @@ export const deleteKeyword = async (req, res) => {
 
 // Toggle tracking active/inactive
 export const toggleTracking = async (req, res) => {
+    try {
+        const tracking = await KeywordTracking.findOne({_id: req.params.id, userId: req.userId});
+        if(!tracking) return res.status(404).json({ success: false, message: "keyword tracking not found" });
+        tracking.active = !tracking.active;
+        await tracking.save();
+        
+        res.json({success: true, tracking });
+        
+
+    } catch (error) {
+        console.error("Toggle tracking error:", error.message);
+        res.status(500).json({ success: false, message: "Server error"});
+    }
 
 }
