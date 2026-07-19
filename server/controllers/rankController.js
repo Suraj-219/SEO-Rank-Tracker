@@ -48,11 +48,28 @@ export const addKeyword = async (req, res) => {
 
 // Get all tracked keywords for user
 export const getKeywords = async (req, res) => {
+    try {
+        const keywords = await keywordTracking.find({userId: req.userId}).sort({createdAt: -1}).select("-rankHistory")
+        res.json({success: true, keywords});
+
+    } catch (error) {
+        console.error("Get keywords error:", error.message);
+        res.status(500).json({ success: false, message: "Server error"});
+    }
 
 }
 
 // Get single keyword with full history
 export const getKeyword = async (req, res) => {
+    try {
+        const tracking = await keywordTracking.findOne({_id: req.params.id, userId: req.userId});
+        if(!tracking) return res.status(404).json({ success: false, message: "keyword tracking not found" });
+        res.json({success: true, tracking});
+
+    } catch (error) {
+        console.error("Get keyword error:", error.message);
+        res.status(500).json({ success: false, message: "Server error"});
+    }
 
 }
 
