@@ -92,6 +92,17 @@ export const refreshKeyword = async (req, res) => {
 
 // Delete keyword tracking
 export const deleteKeyword = async (req, res) => {
+    try {
+        const tracking = await KeywordTracking.findByIdAndDelete({_id: req.params.id, userId: req.userId});
+        if(!tracking) return res.status(404).json({ success: false, message: "keyword tracking not found" });
+        
+        res.json({success: true, message: "keyword tracking deleted" });
+        
+
+    } catch (error) {
+        console.error("Delete keyword error:", error.message);
+        res.status(500).json({ success: false, message: "Server error"});
+    }
 
 }
 
