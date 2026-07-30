@@ -120,13 +120,25 @@ export default function RankTracker() {
     const handleDelete = async (id: string) => {
         if (!confirm("Delete this keyword tracking?")) return;
         setDeleting(id);
-        setTimeout(() => {
-            setDeleting(null);
-        }, 1000);
+        try{
+            await api.delete(`/api/rank/${id}`)
+            setKeywords((prev)=> prev.filter((k) => k._id !== id))
+        } catch (err) {
+            console.error("Delete failed:", err);
+        }
+        setDeleting(null)
     };
 
     const handleToggle = async (id: string) => {
-        console.log(id);
+        try{
+            const res = await api.put(`/api/rank/${id}/toggle`)
+            if(res.data.success){
+                setKeywords((prev)=> prev.map((k) => (k._id === id ? {...k, active: res.data.tracking.actve} : k)))
+            }
+        } catch (err) {
+            console.error("Toggle failed:", err);
+        }
+        
     };
 
     const getPositionBadge = (pos: number | null) => {
