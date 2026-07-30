@@ -22,7 +22,7 @@ interface KeywordItem {
 
 export default function RankTracker() {
 
-    const {api} = useApp()
+    const { api } = useApp()
 
     const [keywords, setKeywords] = useState<KeywordItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -40,7 +40,7 @@ export default function RankTracker() {
     const fetchKeywords = async () => {
         try {
             const res = await api.get('/api/rank/list');
-            if(res.data.success) {
+            if (res.data.success) {
                 setKeywords(res.data.keywords)
             }
 
@@ -52,50 +52,69 @@ export default function RankTracker() {
 
     const handleAdd = async (e: React.SubmitEvent) => {
         e.preventDefault();
-        if(!newKeyword.trim() || !newUrl.trim()) return;
+        if (!newKeyword.trim() || !newUrl.trim()) return;
         setAdding(true);
-        
+
         setAdding(false);
         setAddError("");
-        try{
+        try {
             const res = await api.post('/api/rank/add', {
                 keyword: newKeyword.trim(),
                 url: newUrl.trim()
             });
-            if(res.data.success){
-                setKeywords((prev)=> [res.data.tracking, ...prev])
+            if (res.data.success) {
+                setKeywords((prev) => [res.data.tracking, ...prev])
                 setNewKeyword("")
                 setNewUrl("")
                 setShowAddModal(false)
 
                 // Poll for completion
                 const id = res.data.tracking._id;
-                const pollInterval = setInterval(async ()=>{
+                const pollInterval = setInterval(async () => {
                     try {
                         const check = await api.get(`/api/rank/${id}`);
-                        if(check.data.tracking.status !== "checking"){
+                        if (check.data.tracking.status !== "checking") {
                             clearInterval(pollInterval)
-                            setKeywords((prev)=> prev.map((k)=>(k._id === id ? check.data.tracking : k)))
+                            setKeywords((prev) => prev.map((k) => (k._id === id ? check.data.tracking : k)))
                         }
 
-                    } catch(error){
+                    } catch (error) {
                         console.error(error);
                     }
-                },3000)
+                }, 3000)
             }
 
-        } catch(err: any){
+        } catch (err: any) {
             setAddError(err.response?.data?.message || "Failed to add keyword")
         }
         setAdding(false)
-        
+
     };
 
     const handleRefresh = async (id: string) => {
         setRefreshing(id);
-        setTimeout(() => {
-            setRefreshing(null);
-        }, 1000);
+        try {
+            await api.post(`/api/rank/${id}/refresh`)
+            setKeywords((prev) => prev.map((k) => (k._id === id ? { ...k, status: "checking" } : k)))
+
+            // Poll for completion
+            const pollInterval = setInterval(async () => {
+                try {
+                    const check = await api.get(`/api/rank/${id}`);
+                    if (check.data.tracking.status !== "checking") {
+                        clearInterval(pollInterval)
+                        setKeywords((prev) => prev.map((k) => (k._id === id ? check.data.tracking : k)))
+                        setRefreshing(null)
+                    }
+
+                } catch (error) {
+                    console.error(error);
+                }
+            }, 3000)
+        } catch (err) {
+            console.error("Refresh failed:", err);
+            setRefreshing(null)
+        }
     };
 
     const handleDelete = async (id: string) => {
