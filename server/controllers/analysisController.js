@@ -29,7 +29,7 @@ export const analyzeUrl = async(req, res) => {
             // Step 1: Scrape the URL with BrowserBAse
             const scrapeResult = await scraperUrl(validUrl.href)
 
-            if(!scrapeResult.success){
+            if(!scrapeResult?.success){
                 analysis.status = "failed";
                 await analysis.save();
                 return;

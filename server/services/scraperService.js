@@ -26,7 +26,7 @@ export async function scraperUrl(url) {
         }
 
         const loadTime = Date.now() - startTime;
-        await page.waitForEvent(2000);
+        await page.waitForTimeout(2000);
 
         // Extract all SEO-relevant data from the rendered page
         const scrapedData = await page.evaluate(() => {
@@ -108,9 +108,10 @@ export async function scraperUrl(url) {
         if(browser){
             try{
                 await browser.close()
-            } catch(error) {
-                console.error("[SCRAPER] Browser close failed:", error.message);
+            } catch(closeError) {
+                console.error("[SCRAPER] Browser close failed:", closeError.message);
             }
         }
+        return { success: false, error: error.message };
     }
 }
