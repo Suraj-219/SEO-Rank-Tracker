@@ -1,4 +1,5 @@
 import Analysis from "../models/Analysis.js";
+import { analyzeSeoData } from "../services/geminiService.js";
 import { scraperUrl } from "../services/scraperService.js";
 
 // Analyze URL
@@ -35,6 +36,13 @@ export const analyzeUrl = async(req, res) => {
             }
 
             // Step 2: Analyze with Gemini AI
+            const aiResult = await analyzeSeoData(scrapeResult.data)
+
+            if(!aiResult.success){
+                analysis.status = "failed";
+                await analysis.save()
+                return;
+            }
 
         } catch(bgError){
             console.error("Background analysis error:", bgError.message);
