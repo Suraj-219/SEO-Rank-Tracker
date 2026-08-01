@@ -44,6 +44,22 @@ export const analyzeUrl = async(req, res) => {
                 return;
             }
 
+            // Step 3: Save results
+            analysis.overallScore = aiResult.data.overallScore || 0;
+            analysis.categories = aiResult.data.categories || {};
+            analysis.metaData = scrapeResult.data.metaData || {};
+            analysis.headings = scrapeResult.data.headings || {};
+            analysis.links = scrapeResult.data.links || {};
+            analysis.images = scrapeResult.data.images || {};
+            analysis.keywords = aiResult.data.keywords || [];
+            analysis.issues = aiResult.data.issues || [];
+            analysis.loadTime = scrapeResult.data.loadTime || 0;
+            analysis.pageSize = scrapeResult.data.pageSize || 0;
+            analysis.wordCount = scrapeResult.data.wordCount || 0;
+            analysis.status = "completed";
+
+            await analysis.save();
+
         } catch(bgError){
             console.error("Background analysis error:", bgError.message);
             try{
