@@ -21,6 +21,20 @@ export const analyzeUrl = async(req, res) => {
         // Create analysis record with pending status
         const analysis = await Analysis.create({userId: req.userId, url: validUrl.href, status: "processing"});
 
+        // helper to safely update the analysis by id (avoids errors if document was deleted)
+        const safeUpdateAnalysis = async (id, update) => {
+            try {
+                const updated = await Analysis.findByIdAndUpdate(id, update, { new: true }).exec();
+                if (!updated) {
+                    console.warn(`safeUpdateAnalysis: analysis ${id} not found, skipping update.`);
+                }
+                return updated;
+            } catch (uErr) {
+                console.error("safeUpdateAnalysis error:", uErr?.message || uErr);
+                return null;
+            }
+        };
+
         // Send immediate response with analysis ID
         res.json({ success: true, message: "Analysis started", analysisId: analysis._id})
 
@@ -30,43 +44,60 @@ export const analyzeUrl = async(req, res) => {
             const scrapeResult = await scraperUrl(validUrl.href)
 
             if(!scrapeResult?.success){
-                analysis.status = "failed";
-                await analysis.save();
+                await safeUpdateAnalysis(analysis._id, { status: "failed" });
                 return;
             }
 
-            // Step 2: Analyze with Gemini AI
-            const aiResult = await analyzeSeoData(scrapeResult.data)
+            // Step 2: Analyze with Gemini AI (retry transient errors)
+            let aiResult = null;
+            const maxAttempts = 3;
+            let attempt = 0;
+            let delay = 2000;
 
-            if(!aiResult.success){
-                analysis.status = "failed";
-                await analysis.save()
+            while (attempt < maxAttempts) {
+                attempt++;
+                aiResult = await analyzeSeoData(scrapeResult.data);
+                if (aiResult.success) break;
+                // If not retryable, break immediately
+                if (!aiResult.retryable) break;
+
+                console.warn(`Gemini transient error (attempt ${attempt}/${maxAttempts}):`, aiResult.error);
+                // Ensure status remains processing
+                await safeUpdateAnalysis(analysis._id, { status: "processing" });
+                // backoff
+                await new Promise((r) => setTimeout(r, delay));
+                delay *= 2;
+            }
+
+            if (!aiResult || !aiResult.success) {
+                await safeUpdateAnalysis(analysis._id, { status: "failed" });
                 return;
             }
 
-            // Step 3: Save results
-            analysis.overallScore = aiResult.data.overallScore || 0;
-            analysis.categories = aiResult.data.categories || {};
-            analysis.metaData = scrapeResult.data.metaData || {};
-            analysis.headings = scrapeResult.data.headings || {};
-            analysis.links = scrapeResult.data.links || {};
-            analysis.images = scrapeResult.data.images || {};
-            analysis.keywords = aiResult.data.keywords || [];
-            analysis.issues = aiResult.data.issues || [];
-            analysis.loadTime = scrapeResult.data.loadTime || 0;
-            analysis.pageSize = scrapeResult.data.pageSize || 0;
-            analysis.wordCount = scrapeResult.data.wordCount || 0;
-            analysis.status = "completed";
+            // Step 3: Save results via id-based update to avoid saving a stale/missing document
+            const updatePayload = {
+                overallScore: aiResult.data.overallScore || 0,
+                categories: aiResult.data.categories || {},
+                metaData: scrapeResult.data.metaData || {},
+                headings: scrapeResult.data.headings || {},
+                links: scrapeResult.data.links || {},
+                images: scrapeResult.data.images || {},
+                keywords: aiResult.data.keywords || [],
+                issues: aiResult.data.issues || [],
+                loadTime: scrapeResult.data.loadTime || 0,
+                pageSize: scrapeResult.data.pageSize || 0,
+                wordCount: scrapeResult.data.wordCount || 0,
+                status: "completed",
+            };
 
-            await analysis.save();
+            await safeUpdateAnalysis(analysis._id, updatePayload);
 
         } catch(bgError){
-            console.error("Background analysis error:", bgError.message);
+            console.error("Background analysis error:", bgError?.message || bgError);
             try{
-                analysis.status = "failed";
-                await analysis.save()
+                await safeUpdateAnalysis(analysis._id, { status: "failed" });
             } catch (saveError) {
-                console.error("Failed to save failed status:", saveError.message);
+                console.error("Failed to save failed status:", saveError?.message || saveError);
             }
         }
 
@@ -100,11 +131,14 @@ export const getAnalyses = async(req, res) => {
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        const analyses = await (await Analysis.find({userId: req.userId})).toSorted({createdAt: -1}).skip(skip).limit(limit).select("-issues -keywords");
+        // Use Mongoose query sorting and pagination (avoid passing object to Array.sort)
+        const query = Analysis.find({ userId: req.userId }).sort({ createdAt: -1 }).skip(skip).limit(limit).select("-issues -keywords");
+        const analyses = await query.exec();
 
-        const total = await Analysis.countDocuments({userId: req.userId})
+        const total = await Analysis.countDocuments({ userId: req.userId });
 
-        res.json({ success: true, analyses, pagination: {page, limit, total, pages: Math.ceil(total / limit)} });
+        // Return `Pagination` to match client expectations
+        res.json({ success: true, analyses, Pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
 
     } catch (error){
         console.error("Get analyses error:", error.message);

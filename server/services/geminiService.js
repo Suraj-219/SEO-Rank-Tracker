@@ -124,7 +124,17 @@ Extract top 10 keywords by frequency from the page content.`;
         return { success: true, data: analysis }
 
     } catch (error) {
-        console.error("Gemini analysis error:", error.message);
-        return { success: false, error: error.message};
+        // Log full error
+        console.error("Gemini analysis error:", error);
+
+        // Extract structured info when available
+        const status = error?.response?.status || error?.status || null;
+        const body = error?.response?.data || error?.response || error?.message || String(error);
+
+        // Consider network/fetch errors and 429/503 as retryable
+        const message = typeof body === 'string' ? body : JSON.stringify(body);
+        const retryable = status === 429 || status === 503 || /fetch failed|network error|ETIMEDOUT|ENOTFOUND/i.test(message);
+
+        return { success: false, error: message, status, retryable };
     }
 }
