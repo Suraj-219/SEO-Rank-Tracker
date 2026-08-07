@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import KeywordTracking from "../models/KeywordTracking.js";
+import KeywordTracking from "../models/keywordTracking.js";
 import { keywordTracking } from "../services/keywordTrackingService.js";
 
 export function startRankTrackingCron(){

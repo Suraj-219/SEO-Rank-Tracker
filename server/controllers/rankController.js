@@ -1,4 +1,4 @@
-import KeywordTracking from "../models/KeywordTracking.js";
+import KeywordTracking from "../models/keywordTracking.js";
 import { keywordTracking } from "../services/keywordTrackingService.js";
 
 // Add a keyword to track
