@@ -7,12 +7,31 @@ import rankRouter from "./routes/rankRoutes.js";
 import analysisRouter from "./routes/analysisRoutes.js";
 import { startRankTrackingCron } from "./cron/rankTrackingCron.js";
 
+const normalizeEnv = (value) => {
+    if (typeof value !== "string") return undefined;
+    let normalized = value.trim();
+    if (normalized.startsWith('"') && normalized.endsWith('"')) {
+        normalized = normalized.slice(1, -1).trim();
+    }
+    return normalized;
+};
+
+const MONGODB_URI = normalizeEnv(process.env.MONGODB_URI);
+const JWT_SECRET = normalizeEnv(process.env.JWT_SECRET);
+const CLIENT_ORIGIN = normalizeEnv(process.env.CLIENT_ORIGIN) || "https://seo-rank-tracker-lake.vercel.app";
+
 const requiredEnv = ["MONGODB_URI", "JWT_SECRET"];
-const missingEnv = requiredEnv.filter((name) => !process.env[name]);
+const missingEnv = [];
+if (!MONGODB_URI) missingEnv.push("MONGODB_URI");
+if (!JWT_SECRET) missingEnv.push("JWT_SECRET");
 if (missingEnv.length) {
     console.error(`Missing required environment variables: ${missingEnv.join(", ")}`);
     process.exit(1);
 }
+
+process.env.MONGODB_URI = MONGODB_URI;
+process.env.JWT_SECRET = JWT_SECRET;
+process.env.CLIENT_ORIGIN = CLIENT_ORIGIN;
 
 connectDB()
 
@@ -39,6 +58,11 @@ const corsOptions = {
 app.use(cors(corsOptions))
 app.options(/.*/, cors(corsOptions))
 app.use(express.json())
+
+app.use((req, res, next) => {
+    console.log(`Incoming request: ${req.method} ${req.originalUrl} Origin=${req.headers.origin || "none"}`);
+    next();
+});
 
 app.get('/', (req, res) => res.send("Server is running"))
 app.use("/api/auth", authRouter)
