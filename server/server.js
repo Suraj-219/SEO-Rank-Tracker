@@ -11,8 +11,21 @@ connectDB()
 
 const app = express()
 
+const whitelist = [
+	process.env.CLIENT_ORIGIN || "https://seo-rank-tracker-lake.vercel.app",
+	"http://localhost:5173",
+]
+
 const corsOptions = {
-	origin: [process.env.CLIENT_ORIGIN || "https://seo-rank-tracker-lake.vercel.app", "http://localhost:5173"],
+	origin: function (origin, callback) {
+		// allow requests with no origin (like mobile apps or curl)
+		if (!origin) return callback(null, true)
+		if (whitelist.indexOf(origin) !== -1) {
+			callback(null, true)
+		} else {
+			callback(new Error("Not allowed by CORS"))
+		}
+	},
 	credentials: true,
 }
 
