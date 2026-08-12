@@ -33,7 +33,7 @@ process.env.MONGODB_URI = MONGODB_URI;
 process.env.JWT_SECRET = JWT_SECRET;
 process.env.CLIENT_ORIGIN = CLIENT_ORIGIN;
 
-connectDB()
+// connectDB()
 
 const app = express()
 
@@ -72,6 +72,23 @@ app.use('/api/analysis', analysisRouter)
 // Start cron jobs
 startRankTrackingCron()
 
+// const PORT = process.env.PORT || 5000;
+
+// app.listen(PORT, ()=> console.log(`Server running on port ${PORT}`))
+
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, ()=> console.log(`Server running on port ${PORT}`))
+const startServer = async () => {
+    try {
+        await connectDB();
+
+        app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+    } catch (error) {
+        console.error("Failed to start server:", error.message);
+        process.exit(1);
+    }
+};
+
+startServer();

@@ -8,35 +8,109 @@ const generateToken = (id)=> {
 }
 
 // Register user
-export const register = async(req, res) => {
+// export const register = async(req, res) => {
+//     try {
+//         const {name, email, password} = req.body;
+
+//         if(!name || !email || !password) return res.status(400).json({
+//             success: false, message: "All fields are required"
+//         });
+
+//         // Check if user exists
+//         const existingUser = await User.findOne({email})
+//         if(existingUser) return res.status(400).json({
+//             success: false, message: "User already exists"
+//         });
+
+//         // Hash Password
+//         const hashedPassword = await bcrypt.hash(password, await bcrypt.genSalt(10))
+
+//         // Create User
+//         const user = await User.create({name, email, password:hashedPassword})
+
+//         const token = generateToken(user._id);
+
+//         res.status(201).json({success: true, token, user})
+
+//     } 
+//     // catch (error) {
+//     //     console.error("Register error:", error.message)
+//     //     res.status(500).json({success: false, message: "Server error"})
+//     // }
+//     catch(error){
+//         console.error("Register error:", error);
+
+//         res.status(500).json({
+//             success: false,
+//             message: error.message || "Server error"
+//         });
+//     }
+// }
+
+export const register = async (req, res) => {
     try {
-        const {name, email, password} = req.body;
+        const { name, email, password } = req.body;
 
-        if(!name || !email || !password) return res.status(400).json({
-            success: false, message: "All fields are required"
+        if (!name || !email || !password) {
+            return res.status(400).json({
+                success: false,
+                message: "All fields are required"
+            });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: "Password must be at least 6 characters"
+            });
+        }
+
+        const normalizedEmail = email.toLowerCase().trim();
+
+        const existingUser = await User.findOne({
+            email: normalizedEmail
         });
 
-        // Check if user exists
-        const existingUser = await User.findOne({email})
-        if(existingUser) return res.status(400).json({
-            success: false, message: "User already exists"
+        if (existingUser) {
+            return res.status(400).json({
+                success: false,
+                message: "User already exists"
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const user = await User.create({
+            name: name.trim(),
+            email: normalizedEmail,
+            password: hashedPassword
         });
-
-        // Hash Password
-        const hashedPassword = await bcrypt.hash(password, await bcrypt.genSalt(10))
-
-        // Create User
-        const user = await User.create({name, email, password:hashedPassword})
 
         const token = generateToken(user._id);
 
-        res.status(201).json({success: true, token, user})
+        const safeUser = {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            plan: user.plan,
+            analysisCount: user.analysisCount
+        };
+
+        res.status(201).json({
+            success: true,
+            token,
+            user: safeUser
+        });
 
     } catch (error) {
-        console.error("Register error:", error.message)
-        res.status(500).json({success: false, message: "Server error"})
+        console.error("Register error:", error);
+
+        res.status(500).json({
+            success: false,
+            message: error.message || "Server error"
+        });
     }
-}
+};
 
 // Login user
 export const login = async(req, res) => {
