@@ -12,7 +12,7 @@ import { startRankTrackingCron } from "./cron/rankTrackingCron.js";
 
 
 // --------------------------------------------------
-// Helper: Normalize environment variables
+// Normalize Environment Variables
 // --------------------------------------------------
 
 const normalizeEnv = (value) => {
@@ -42,9 +42,13 @@ const normalizeEnv = (value) => {
 // Environment Variables
 // --------------------------------------------------
 
-const MONGODB_URI = normalizeEnv(process.env.MONGODB_URI);
+const MONGODB_URI = normalizeEnv(
+    process.env.MONGODB_URI
+);
 
-const JWT_SECRET = normalizeEnv(process.env.JWT_SECRET);
+const JWT_SECRET = normalizeEnv(
+    process.env.JWT_SECRET
+);
 
 const CLIENT_ORIGIN =
     normalizeEnv(process.env.CLIENT_ORIGIN) ||
@@ -52,7 +56,7 @@ const CLIENT_ORIGIN =
 
 
 // --------------------------------------------------
-// Check Required Environment Variables
+// Required Environment Variables
 // --------------------------------------------------
 
 const missingEnv = [];
@@ -75,7 +79,7 @@ if (missingEnv.length > 0) {
 
 
 // --------------------------------------------------
-// Store normalized values back into process.env
+// Store Normalized Environment Variables
 // --------------------------------------------------
 
 process.env.MONGODB_URI = MONGODB_URI;
@@ -91,42 +95,45 @@ const app = express();
 
 
 // --------------------------------------------------
-// Allowed Frontend Origins
+// Allowed Origins
 // --------------------------------------------------
 
-const whitelist = [
-    CLIENT_ORIGIN,
+const allowedOrigins = [
     "https://seo-rank-tracker-lake.vercel.app",
     "http://localhost:5173",
+    CLIENT_ORIGIN,
 ];
 
 
-// Remove duplicate origins
-const allowedOrigins = [...new Set(whitelist)];
+// Remove duplicates
+const whitelist = [
+    ...new Set(allowedOrigins),
+];
 
 
 // --------------------------------------------------
-// CORS Configuration
+// CORS
 // --------------------------------------------------
 
 const corsOptions = {
     origin: function (origin, callback) {
 
-        // Allow requests without Origin
-        // Example: Postman, curl, server-to-server
+        // Allow Postman, curl, server-to-server requests
         if (!origin) {
             return callback(null, true);
         }
 
-        // Allow only trusted frontend origins
-        if (allowedOrigins.includes(origin)) {
+        // Allow trusted frontend
+        if (whitelist.includes(origin)) {
             return callback(null, true);
         }
 
-        console.error("Blocked by CORS:", origin);
+        console.error(
+            `CORS blocked origin: ${origin}`
+        );
 
         return callback(
-            new Error(`CORS blocked origin: ${origin}`)
+            new Error("Not allowed by CORS")
         );
     },
 
@@ -148,16 +155,12 @@ const corsOptions = {
 };
 
 
-// Apply CORS middleware
+// Apply CORS
 app.use(cors(corsOptions));
 
 
-// Explicitly handle preflight requests
-app.options("*", cors(corsOptions));
-
-
 // --------------------------------------------------
-// Body Parsers
+// Body Parser
 // --------------------------------------------------
 
 app.use(express.json());
@@ -196,11 +199,20 @@ app.get("/", (req, res) => {
 // API Routes
 // --------------------------------------------------
 
-app.use("/api/auth", authRouter);
+app.use(
+    "/api/auth",
+    authRouter
+);
 
-app.use("/api/rank", rankRouter);
+app.use(
+    "/api/rank",
+    rankRouter
+);
 
-app.use("/api/analysis", analysisRouter);
+app.use(
+    "/api/analysis",
+    analysisRouter
+);
 
 
 // --------------------------------------------------
@@ -214,6 +226,7 @@ app.use((req, res) => {
         message: "API route not found",
         path: req.originalUrl,
     });
+
 });
 
 
@@ -223,29 +236,50 @@ app.use((req, res) => {
 
 app.use((err, req, res, next) => {
 
-    console.error("Server Error:", err.message);
+    console.error(
+        "================================="
+    );
+
+    console.error(
+        "SERVER ERROR:"
+    );
+
+    console.error(err);
+
+    console.error(
+        "================================="
+    );
+
 
     // CORS error
-    if (err.message?.startsWith("CORS blocked origin")) {
+    if (
+        err.message === "Not allowed by CORS"
+    ) {
 
         return res.status(403).json({
             success: false,
             message: "CORS policy blocked this request",
         });
+
     }
 
-    res.status(500).json({
+
+    return res.status(500).json({
         success: false,
-        message: "Internal server error",
+        message:
+            err.message ||
+            "Internal server error",
     });
+
 });
 
 
 // --------------------------------------------------
-// Server
+// Server Port
 // --------------------------------------------------
 
-const PORT = process.env.PORT || 5000;
+const PORT =
+    process.env.PORT || 5000;
 
 
 // --------------------------------------------------
@@ -259,33 +293,35 @@ const startServer = async () => {
         // Connect MongoDB first
         await connectDB();
 
-        console.log("MongoDB connected successfully");
+        console.log(
+            "MongoDB connected successfully"
+        );
 
 
-        // Start cron jobs only after DB connection
+        // Start cron after DB connection
         startRankTrackingCron();
 
-        console.log("Rank tracking cron started");
+        console.log(
+            "Rank tracking cron started"
+        );
 
 
-        // Start Express server
+        // Start Express
         app.listen(PORT, () => {
 
             console.log(
                 `Server running on port ${PORT}`
             );
 
-            console.log(
-                `Allowed frontend origins: ${allowedOrigins.join(", ")}`
-            );
         });
 
     } catch (error) {
 
         console.error(
-            "Failed to start server:",
-            error.message
+            "Failed to start server:"
         );
+
+        console.error(error);
 
         process.exit(1);
     }
