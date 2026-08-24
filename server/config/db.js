@@ -17,12 +17,17 @@ const connectDB = async () => {
         });
 
         console.log("MongoDB connected successfully");
+
         console.log(
             `MongoDB database: ${mongoose.connection.name}`
         );
 
     } catch (error) {
-        console.error("MongoDB connection failed:");
+
+        console.error(
+            "MongoDB connection failed:"
+        );
+
         console.error(error);
 
         throw error;
