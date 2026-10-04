@@ -19,11 +19,13 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
+    "ls": "^1.0.0",
     "mongoose": "^9.6.2",
     "node-cron": "^4.6.0",
-    "playwright-core": "^1.60.0"
+    "playwright-core": "^1.60.0",
+    "scripts": "^0.1.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "nodemon": "^1.14.10"
   }
 }
